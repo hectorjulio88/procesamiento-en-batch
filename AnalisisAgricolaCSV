@@ -1,0 +1,62 @@
+# Importar librerías
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col, sum, avg
+
+# =========================
+# CREAR SESIÓN DE SPARK
+# =========================
+spark = SparkSession.builder.appName("AnalisisAgricolaCSV").getOrCreate()
+
+# =========================
+# CARGAR DATOS
+# =========================
+df = spark.read.option("header", "true").option("inferSchema", "true").csv("datos.csv")
+
+print("=== DATOS ORIGINALES ===")
+df.show(5)
+
+print("=== COLUMNAS ===")
+print(df.columns)
+
+# =========================
+# LIMPIEZA DE DATOS
+# =========================
+# Eliminar nulos y duplicados
+df_clean = df.dropna().dropDuplicates()
+
+# =========================
+# TRANSFORMACIÓN
+# =========================
+# Filtrar datos del año 2016
+df_filtrado = df_clean.filter(col("periodo") == 2016)
+
+print("=== DATOS FILTRADOS (2016) ===")
+df_filtrado.show(5)
+
+# =========================
+# ANÁLISIS (EDA)
+# =========================
+
+# Producción por cultivo
+print("=== PRODUCCIÓN POR CULTIVO ===")
+df_filtrado.groupBy("cultivo") \
+    .agg(sum("producci_n_t").alias("total_produccion")) \
+    .orderBy(col("total_produccion").desc()) \
+    .show()
+
+# Promedio de rendimiento por cultivo
+print("=== PROMEDIO RENDIMIENTO ===")
+df_filtrado.groupBy("cultivo") \
+    .agg(avg("rendimiento_t_ha").alias("promedio_rendimiento")) \
+    .show()
+
+# Producción por departamento
+print("=== PRODUCCIÓN POR DEPARTAMENTO ===")
+df_filtrado.groupBy("departamento") \
+    .agg(sum("producci_n_t").alias("total_produccion")) \
+    .show()
+
+# =========================
+# FINALIZAR
+# =========================
+spark.stop()
