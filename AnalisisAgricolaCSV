@@ -1,62 +1,117 @@
-# Importar librerías
+# =========================================================
+# IMPORTACIÓN DE LIBRERÍAS
+# =========================================================
+# Se importan las librerías necesarias de PySpark
+# SparkSession: permite crear la sesión de trabajo en Spark
+# col, sum, avg: funciones para manipular y analizar los datos
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, sum, avg
 
-# =========================
+
+# =========================================================
 # CREAR SESIÓN DE SPARK
-# =========================
+# =========================================================
+# Se inicializa Spark, que es el motor que permite procesar
+# grandes volúmenes de datos de forma distribuida
 spark = SparkSession.builder.appName("AnalisisAgricolaCSV").getOrCreate()
 
-# =========================
-# CARGAR DATOS
-# =========================
-df = spark.read.option("header", "true").option("inferSchema", "true").csv("datos.csv")
 
+# =========================================================
+# 📥 CARGA DE DATOS (Procesamiento Batch)
+# =========================================================
+# En esta etapa se cargan los datos desde un archivo externo (CSV)
+# - header = true → indica que la primera fila contiene los nombres de columnas
+# - inferSchema = true → permite que Spark detecte automáticamente el tipo de dato
+# Este dataset corresponde a datos de producción agrícola
+df = spark.read.option("header", "true") \
+               .option("inferSchema", "true") \
+               .csv("datos.csv")
+
+# Visualización inicial de los datos
 print("=== DATOS ORIGINALES ===")
 df.show(5)
 
+# Mostrar las columnas disponibles
 print("=== COLUMNAS ===")
 print(df.columns)
 
-# =========================
-# LIMPIEZA DE DATOS
-# =========================
-# Eliminar nulos y duplicados
+
+# =========================================================
+# 🧹 LIMPIEZA DE DATOS
+# =========================================================
+# En esta fase se mejora la calidad de la información
+# - dropna(): elimina filas con valores nulos
+# - dropDuplicates(): elimina registros repetidos
+# Esto es importante para evitar errores en el análisis
 df_clean = df.dropna().dropDuplicates()
 
-# =========================
-# TRANSFORMACIÓN
-# =========================
-# Filtrar datos del año 2016
+
+# =========================================================
+# 🔄 TRANSFORMACIÓN DE DATOS
+# =========================================================
+# Se preparan los datos para el análisis
+# En este caso:
+# - Se filtra la información para trabajar solo con el año 2016
+# - Se usa la columna "periodo" como referencia temporal
 df_filtrado = df_clean.filter(col("periodo") == 2016)
 
+# Mostrar una muestra de los datos filtrados
 print("=== DATOS FILTRADOS (2016) ===")
 df_filtrado.show(5)
 
-# =========================
-# ANÁLISIS (EDA)
-# =========================
 
-# Producción por cultivo
+# =========================================================
+# 📊 ANÁLISIS EXPLORATORIO DE DATOS (EDA)
+# =========================================================
+# En esta sección se generan métricas que permiten entender
+# el comportamiento de los datos
+
+# ---------------------------------------------------------
+# Producción total por cultivo
+# ---------------------------------------------------------
+# Se agrupan los datos por tipo de cultivo
+# Luego se suma la producción total (producci_n_t)
+# Finalmente se ordena de mayor a menor
 print("=== PRODUCCIÓN POR CULTIVO ===")
 df_filtrado.groupBy("cultivo") \
     .agg(sum("producci_n_t").alias("total_produccion")) \
     .orderBy(col("total_produccion").desc()) \
     .show()
 
+
+# ---------------------------------------------------------
 # Promedio de rendimiento por cultivo
+# ---------------------------------------------------------
+# Se calcula el promedio del rendimiento (toneladas por hectárea)
+# para cada tipo de cultivo
 print("=== PROMEDIO RENDIMIENTO ===")
 df_filtrado.groupBy("cultivo") \
     .agg(avg("rendimiento_t_ha").alias("promedio_rendimiento")) \
     .show()
 
-# Producción por departamento
+
+# ---------------------------------------------------------
+# Producción total por departamento
+# ---------------------------------------------------------
+# Se analiza cómo se distribuye la producción por región
 print("=== PRODUCCIÓN POR DEPARTAMENTO ===")
 df_filtrado.groupBy("departamento") \
     .agg(sum("producci_n_t").alias("total_produccion")) \
     .show()
 
-# =========================
-# FINALIZAR
-# =========================
+
+# =========================================================
+# 📈 VISUALIZACIÓN DE RESULTADOS
+# =========================================================
+# En este caso, la visualización se realiza en consola
+# utilizando:
+# - print() para títulos
+# - show() para mostrar tablas
+# Esto permite interpretar fácilmente los resultados
+
+
+# =========================================================
+# FINALIZAR SESIÓN
+# =========================================================
+# Se detiene la sesión de Spark para liberar recursos
 spark.stop()
